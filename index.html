@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tienda Virtual | Dashboard de Microservicios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#172033",
+            navy: "#243b64",
+            mint: "#dff7ef",
+            coral: "#ffebe7"
+          },
+          boxShadow: {
+            panel: "0 18px 45px rgba(36, 59, 100, 0.10)"
+          }
+        }
+      }
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-slate-100 text-ink">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-7 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div class="mb-3 flex items-center gap-3">
+          <span class="live-dot"></span>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600">Panel de operación</p>
+        </div>
+        <h1 class="hero-title text-3xl font-black tracking-tight text-slate-900 md:text-5xl">Tienda Virtual</h1>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Una vista clara y cercana para cuidar clientes, productos y pedidos en un solo lugar.</p>
+      </div>
+      <div class="human-badge hidden lg:flex" aria-hidden="true">
+        <div class="human-avatar"><span class="avatar-head"></span><span class="avatar-body"></span></div>
+        <div><strong>Todo en orden</strong><small>Servicios conectados</small></div>
+      </div>
+      <button id="refresh-all" class="inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/10 transition hover:bg-indigo-900 focus:outline-none focus:ring-4 focus:ring-indigo-200">
+        <span class="refresh-icon" aria-hidden="true"></span> Actualizar información
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div id="global-notice" class="mb-6 hidden rounded-2xl border px-4 py-3 text-sm font-semibold" role="alert"></div>
+    <div id="order-success" class="order-success" aria-live="polite" aria-hidden="true">
+      <div class="order-success-card">
+        <span class="success-check" aria-hidden="true"></span>
+        <div>
+          <strong>Pedido guardado</strong>
+          <span id="order-success-detail">La orden fue procesada correctamente.</span>
+        </div>
+      </div>
+      <span class="success-particle particle-one" aria-hidden="true"></span>
+      <span class="success-particle particle-two" aria-hidden="true"></span>
+      <span class="success-particle particle-three" aria-hidden="true"></span>
+    </div>
+
+    <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div class="metric-card reveal"><span class="metric-label">Clientes</span><strong id="stat-customers">0</strong><small>registros activos</small></div>
+      <div class="metric-card reveal"><span class="metric-label">Productos</span><strong id="stat-products">0</strong><small>items en catálogo</small></div>
+      <div class="metric-card reveal"><span class="metric-label">Pedidos</span><strong id="stat-orders">0</strong><small>órdenes procesadas</small></div>
+      <div class="metric-card reveal"><span class="metric-label">Pagos</span><strong id="stat-payments">0</strong><small>transacciones registradas</small></div>
+      <div class="metric-card reveal"><span class="metric-label">Resiliencia</span><strong class="text-cyan-300">ON</strong><small>health checks activos</small></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-4">
+      <!-- CLIENTES -->
+      <section id="panel-customers" class="dashboard-panel tilt-card reveal overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+        <div class="border-b border-slate-100 bg-gradient-to-br from-violet-50 to-white p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="sticker sticker-customer mb-3" aria-hidden="true"><span class="sticker-glyph glyph-customer"></span></div>
+              <h2 class="text-xl font-extrabold text-slate-900">Clientes</h2>
+              <p class="mt-1 text-xs font-medium text-slate-500">Servicio en puerto 8002</p>
+            </div>
+            <span id="status-customers" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">Comprobando...</span>
+          </div>
+          <div id="notice-customers" class="mt-4 hidden rounded-xl border px-3 py-2 text-xs font-semibold" role="alert"></div>
+        </div>
+
+        <div class="space-y-6 p-6">
+          <form id="customer-form" class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <h3 id="customer-form-title" class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Registrar cliente</h3>
+              <span id="customer-form-mode" class="hidden rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700">Editando</span>
+            </div>
+            <input id="customer-id" type="number" min="1" placeholder="ID del cliente" class="field" required />
+            <input id="customer-name" type="text" minlength="2" placeholder="Nombre completo" class="field" required />
+            <input id="customer-email" type="email" placeholder="Correo electrónico" class="field" required />
+            <input id="customer-address" type="text" minlength="3" placeholder="Dirección de entrega" class="field" required />
+            <div class="flex gap-2">
+              <button id="customer-submit" class="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-4 focus:ring-violet-200" type="submit">+ Registrar cliente</button>
+              <button id="customer-cancel-edit" class="hidden rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50" type="button">Cancelar</button>
+            </div>
+          </form>
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Clientes registrados</h3>
+              <span id="customer-count" class="rounded-full bg-violet-50 px-2 py-1 text-xs font-bold text-violet-700">0</span>
+            </div>
+            <div id="customer-list" class="max-h-96 space-y-3 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRODUCTOS -->
+      <section id="panel-products" class="dashboard-panel tilt-card reveal overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+        <div class="border-b border-slate-100 bg-gradient-to-br from-emerald-50 to-white p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="sticker sticker-product mb-3" aria-hidden="true"><span class="sticker-glyph glyph-product"></span></div>
+              <h2 class="text-xl font-extrabold text-slate-900">Productos</h2>
+              <p class="mt-1 text-xs font-medium text-slate-500">Servicio en puerto 8001</p>
+            </div>
+            <span id="status-products" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">Comprobando...</span>
+          </div>
+          <div id="notice-products" class="mt-4 hidden rounded-xl border px-3 py-2 text-xs font-semibold" role="alert"></div>
+        </div>
+
+        <div class="space-y-6 p-6">
+          <form id="product-form" class="space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <h3 id="product-form-title" class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Crear producto</h3>
+              <span id="product-form-mode" class="hidden rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Editando</span>
+            </div>
+            <input id="product-id" type="number" min="1" placeholder="ID del producto" class="field" required />
+            <input id="product-name" type="text" minlength="2" placeholder="Nombre del producto" class="field" required />
+            <input id="product-price" type="number" min="0.01" step="0.01" placeholder="Precio" class="field" required />
+            <input id="product-stock" type="number" min="0" placeholder="Stock disponible" class="field" required />
+            <div class="flex gap-2">
+              <button id="product-submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200" type="submit">+ Crear producto</button>
+              <button id="product-cancel-edit" class="hidden rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50" type="button">Cancelar</button>
+            </div>
+            <p class="text-[11px] leading-4 text-slate-400">La cantidad de stock se descuenta automáticamente al procesar pedidos.</p>
+          </form>
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Catálogo</h3>
+              <span id="product-count" class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">0</span>
+            </div>
+            <div id="product-list" class="max-h-96 space-y-3 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PEDIDOS -->
+      <section id="panel-orders" class="dashboard-panel tilt-card reveal overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+        <div class="border-b border-slate-100 bg-gradient-to-br from-amber-50 to-white p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="sticker sticker-order mb-3" aria-hidden="true"><span class="sticker-glyph glyph-order"></span></div>
+              <h2 class="text-xl font-extrabold text-slate-900">Pedidos</h2>
+              <p class="mt-1 text-xs font-medium text-slate-500">Servicio en puerto 8003</p>
+            </div>
+            <span id="status-orders" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">Comprobando...</span>
+          </div>
+          <div id="notice-orders" class="mt-4 hidden rounded-xl border px-3 py-2 text-xs font-semibold" role="alert"></div>
+        </div>
+
+        <div class="space-y-6 p-6">
+          <form id="order-form" class="space-y-3">
+            <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Procesar pedido</h3>
+            <input id="order-id" type="number" min="1" placeholder="ID del pedido" class="field" required />
+            <input id="order-customer-id" type="number" min="1" placeholder="ID del cliente" class="field" required />
+            <input id="order-product-id" type="number" min="1" placeholder="ID del producto" class="field" required />
+            <input id="order-quantity" type="number" min="1" value="1" placeholder="Cantidad" class="field" required />
+            <button class="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-200" type="submit">✓ Crear pedido</button>
+          </form>
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Órdenes procesadas</h3>
+              <span id="order-count" class="rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">0</span>
+            </div>
+            <div id="order-list" class="max-h-96 space-y-3 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGOS -->
+      <section id="panel-payments" class="dashboard-panel tilt-card reveal overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-panel">
+        <div class="border-b border-slate-100 bg-gradient-to-br from-sky-50 to-white p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="sticker sticker-payment mb-3" aria-hidden="true"><span class="sticker-glyph glyph-payment"></span></div>
+              <h2 class="text-xl font-extrabold text-slate-900">Pagos</h2>
+              <p class="mt-1 text-xs font-medium text-slate-500">Servicio en puerto 8004</p>
+            </div>
+            <span id="status-payments" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">Comprobando...</span>
+          </div>
+          <div id="notice-payments" class="mt-4 hidden rounded-xl border px-3 py-2 text-xs font-semibold" role="alert"></div>
+        </div>
+
+        <div class="space-y-6 p-6">
+          <form id="payment-form" class="space-y-3">
+            <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Registrar pago</h3>
+            <input id="payment-id" type="number" min="1" placeholder="ID del pago" class="field" required />
+            <input id="payment-order-id" type="number" min="1" placeholder="ID del pedido" class="field" required />
+            <select id="payment-method" class="field" required>
+              <option value="card">Tarjeta</option>
+              <option value="pse">PSE</option>
+              <option value="cash">Efectivo</option>
+            </select>
+            <input id="payment-amount" type="number" min="0.01" step="0.01" placeholder="Monto (opcional: usa el total del pedido)" class="field" />
+            <button class="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-200" type="submit">+ Procesar pago</button>
+            <p class="text-[11px] leading-4 text-slate-400">El pago valida por HTTP que el pedido exista antes de registrarse.</p>
+          </form>
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-700">Pagos registrados</h3>
+              <span id="payment-count" class="rounded-full bg-sky-50 px-2 py-1 text-xs font-bold text-sky-700">0</span>
+            </div>
+            <div id="payment-list" class="max-h-96 space-y-3 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="mx-auto max-w-7xl px-6 pb-8 text-center text-xs text-slate-400">
+    Dashboard académico · FastAPI · REST · Tolerancia a fallos
+  </footer>
+
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      overflow-x: hidden;
+      background: #070b17 !important;
+      color: #e5eefb !important;
+    }
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background-image: linear-gradient(rgba(91, 112, 160, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(91, 112, 160, 0.08) 1px, transparent 1px);
+      background-size: 44px 44px;
+      content: "";
+      mask-image: linear-gradient(to bottom, black, transparent 82%);
+      pointer-events: none;
+    }
+    .ambient {
+      position: fixed;
+      z-index: -2;
+      width: 28rem;
+      height: 28rem;
+      border-radius: 999px;
+      filter: blur(80px);
+      opacity: 0.22;
+      pointer-events: none;
+      animation: drift 16s ease-in-out infinite alternate;
+    }
+    .ambient-one { top: 8%; left: -10rem; background: #6846e8; }
+    .ambient-two { right: -10rem; bottom: 4%; background: #00c2bf; animation-delay: -7s; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-color: rgba(148, 163, 184, 0.14) !important;
+      background: rgba(7, 11, 23, 0.78) !important;
+      backdrop-filter: blur(22px);
+    }
+    header > div { position: relative; z-index: 1; }
+    .hero-title {
+      background: linear-gradient(100deg, #f8fbff 0%, #a5b4fc 42%, #67e8f9 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent !important;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22d3ee;
+      box-shadow: 0 0 0 5px rgba(34, 211, 238, 0.12), 0 0 18px #22d3ee;
+      animation: pulse-dot 1.8s ease-in-out infinite;
+    }
+    .refresh-icon {
+      position: relative;
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      transition: transform 500ms;
+    }
+    .refresh-icon::after {
+      position: absolute;
+      top: -4px;
+      right: -3px;
+      width: 0;
+      height: 0;
+      border-top: 4px solid currentColor;
+      border-right: 4px solid transparent;
+      content: "";
+      transform: rotate(30deg);
+    }
+    #refresh-all:hover .refresh-icon { transform: rotate(180deg); }
+    .hero-visual { width: 145px; text-align: center; }
+    .cube-scene { height: 92px; perspective: 420px; }
+    .cube {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      margin: 15px auto;
+      transform-style: preserve-3d;
+      animation: spin-cube 12s linear infinite;
+    }
+    .cube-face {
+      position: absolute;
+      display: grid;
+      width: 58px;
+      height: 58px;
+      place-items: center;
+      border: 1px solid rgba(103, 232, 249, 0.58);
+      background: linear-gradient(145deg, rgba(34, 211, 238, 0.25), rgba(99, 102, 241, 0.1));
+      box-shadow: inset 0 0 22px rgba(103, 232, 249, 0.12), 0 0 20px rgba(34, 211, 238, 0.12);
+      color: #a5f3fc;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      backface-visibility: visible;
+    }
+    .cube-front { transform: translateZ(29px); }
+    .cube-back { transform: rotateY(180deg) translateZ(29px); }
+    .cube-right { transform: rotateY(90deg) translateZ(29px); }
+    .cube-left { transform: rotateY(-90deg) translateZ(29px); }
+    .cube-top { transform: rotateX(90deg) translateZ(29px); }
+    .cube-bottom { transform: rotateX(-90deg) translateZ(29px); }
+    .hero-visual-caption { color: #64748b; font-size: 9px; font-weight: 800; letter-spacing: 0.22em; }
+    .metric-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 1.25rem;
+      background: linear-gradient(145deg, rgba(19, 30, 54, 0.78), rgba(11, 17, 33, 0.76));
+      padding: 1rem 1.1rem;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.16), inset 0 1px rgba(255, 255, 255, 0.05);
+    }
+    .metric-card::after {
+      position: absolute;
+      top: -40px;
+      right: -30px;
+      width: 90px;
+      height: 90px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.12);
+      content: "";
+      filter: blur(15px);
+    }
+    .metric-label { display: block; color: #94a3b8; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+    .metric-card strong { display: block; margin-top: 0.25rem; color: #f8fafc; font-size: 1.65rem; line-height: 1; }
+    .metric-card small { display: block; margin-top: 0.45rem; color: #64748b; font-size: 0.68rem; }
+    .dashboard-panel {
+      position: relative;
+      border-color: rgba(148, 163, 184, 0.15) !important;
+      background: rgba(13, 21, 39, 0.78) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.05) !important;
+      transform-style: preserve-3d;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      will-change: transform;
+    }
+    .dashboard-panel:hover {
+      border-color: rgba(103, 232, 249, 0.32) !important;
+      box-shadow: 0 30px 75px rgba(0, 0, 0, 0.28), 0 0 36px rgba(34, 211, 238, 0.06) !important;
+    }
+    .dashboard-panel > div:first-child {
+      border-color: rgba(148, 163, 184, 0.12) !important;
+      background: linear-gradient(145deg, rgba(28, 43, 76, 0.78), rgba(14, 23, 42, 0.32)) !important;
+    }
+    .dashboard-panel .text-slate-900 { color: #f8fafc !important; }
+    .dashboard-panel .text-slate-800 { color: #e2e8f0 !important; }
+    .dashboard-panel .text-slate-700 { color: #cbd5e1 !important; }
+    .dashboard-panel .text-slate-500,
+    .dashboard-panel .text-slate-400 { color: #94a3b8 !important; }
+    .dashboard-panel article {
+      border-color: rgba(148, 163, 184, 0.14) !important;
+      background: rgba(255, 255, 255, 0.045) !important;
+      transition: transform 180ms ease, background 180ms ease;
+    }
+    .dashboard-panel article:hover { background: rgba(255, 255, 255, 0.085) !important; transform: translateX(4px); }
+    .field {
+      border-color: rgba(148, 163, 184, 0.18) !important;
+      background: rgba(5, 12, 28, 0.58) !important;
+      color: #e2e8f0 !important;
+    }
+    .field::placeholder { color: #64748b; }
+    .field:focus { border-color: #22d3ee !important; background: rgba(9, 20, 40, 0.9) !important; box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12) !important; }
+    footer { color: #64748b !important; }
+    .reveal { animation: reveal-up 700ms cubic-bezier(.2,.8,.2,1) both; }
+    .reveal:nth-child(2) { animation-delay: 80ms; }
+    .reveal:nth-child(3) { animation-delay: 160ms; }
+    .reveal:nth-child(4) { animation-delay: 240ms; }
+    @keyframes reveal-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes drift { from { transform: translate3d(-20px, -10px, 0) scale(0.95); } to { transform: translate3d(24px, 30px, 0) scale(1.08); } }
+    @keyframes pulse-dot { 0%, 100% { opacity: 0.55; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.15); } }
+    @keyframes spin-cube { from { transform: rotateX(-18deg) rotateY(0deg); } to { transform: rotateX(-18deg) rotateY(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+
+    .field {
+      width: 100%;
+      border-radius: 0.75rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      padding: 0.75rem 0.875rem;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 150ms, box-shadow 150ms, background 150ms;
+    }
+    .field:focus {
+      border-color: #818cf8;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.16);
+    }
+
+    /* Tema humano y profesional: más luz, calidez y menos estética técnica. */
+    body {
+      background: #f7f8fc !important;
+      color: #243047 !important;
+    }
+    body::before {
+      background-image: radial-gradient(circle at 1px 1px, rgba(99, 102, 241, 0.08) 1px, transparent 0);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 72%);
+    }
+    .ambient { opacity: 0.12; filter: blur(100px); }
+    .ambient-one { background: #a78bfa; }
+    .ambient-two { background: #f7b267; }
+    header {
+      border-color: #e8eaf2 !important;
+      background: rgba(255, 255, 255, 0.88) !important;
+      box-shadow: 0 8px 30px rgba(50, 60, 90, 0.06);
+    }
+    .hero-title {
+      background: linear-gradient(100deg, #25334d 0%, #5a55a6 62%, #bf7658 100%);
+    }
+    .live-dot {
+      background: #63a88b;
+      box-shadow: 0 0 0 5px rgba(99, 168, 139, 0.13), 0 0 14px rgba(99, 168, 139, 0.45);
+    }
+    .human-badge {
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 190px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e6e8f0;
+      border-radius: 1.15rem;
+      background: rgba(255, 255, 255, 0.75);
+      box-shadow: 0 12px 30px rgba(50, 60, 90, 0.07);
+    }
+    .human-avatar {
+      position: relative;
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 13px;
+      background: #eeeafd;
+      color: #665db5;
+      box-shadow: inset 0 -5px 0 rgba(102, 93, 181, 0.08);
+      transform: translateZ(0);
+    }
+    .avatar-head,
+    .avatar-body {
+      position: absolute;
+      display: block;
+      background: linear-gradient(145deg, #756bc0, #433c87);
+      box-shadow: inset -2px -2px 0 rgba(39, 30, 91, 0.22), 2px 2px 0 #a49bdd;
+    }
+    .avatar-head {
+      top: 8px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+    .avatar-body {
+      bottom: 7px;
+      width: 20px;
+      height: 13px;
+      border-radius: 12px 12px 5px 5px;
+    }
+    .human-badge strong { display: block; color: #33415c; font-size: 0.82rem; }
+    .human-badge small { display: block; margin-top: 0.15rem; color: #8a94a8; font-size: 0.68rem; }
+    .metric-card {
+      border-color: #e8eaf2;
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 12px 30px rgba(50, 60, 90, 0.06);
+    }
+    .metric-card::after { background: rgba(108, 92, 175, 0.09); }
+    .metric-label { color: #8791a5; }
+    .metric-card strong { color: #273650; }
+    .metric-card small { color: #9aa3b3; }
+    .dashboard-panel {
+      border-color: #e5e8f0 !important;
+      background: rgba(255, 255, 255, 0.9) !important;
+      box-shadow: 0 16px 38px rgba(50, 60, 90, 0.07), inset 0 1px rgba(255, 255, 255, 0.8) !important;
+    }
+    .dashboard-panel:hover {
+      border-color: #d8d7ef !important;
+      box-shadow: 0 20px 45px rgba(50, 60, 90, 0.11) !important;
+    }
+    .dashboard-panel > div:first-child {
+      border-color: #eceef5 !important;
+      background: linear-gradient(145deg, #fbfbff, #fffaf7) !important;
+    }
+    .dashboard-panel .text-slate-900 { color: #273650 !important; }
+    .dashboard-panel .text-slate-800 { color: #35435d !important; }
+    .dashboard-panel .text-slate-700 { color: #657086 !important; }
+    .dashboard-panel .text-slate-500,
+    .dashboard-panel .text-slate-400 { color: #8993a5 !important; }
+    .dashboard-panel article {
+      border-color: #eceef4 !important;
+      background: #fbfcff !important;
+    }
+    .dashboard-panel article:hover { background: #f7f5ff !important; transform: translateY(-2px); }
+    .field {
+      border-color: #e3e6ee !important;
+      background: #fbfcfe !important;
+      color: #33415c !important;
+    }
+    .field::placeholder { color: #a2aaba; }
+    .field:focus {
+      border-color: #8d86d8 !important;
+      background: #fff !important;
+      box-shadow: 0 0 0 4px rgba(141, 134, 216, 0.14) !important;
+    }
+    .customer-action {
+      border-radius: 0.65rem;
+      padding: 0.42rem 0.7rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+    }
+    .customer-action:hover { transform: translateY(-1px); }
+    .customer-action-edit { color: #665db5; background: #eeeafd; }
+    .customer-action-edit:hover { background: #e1dcff; }
+    .customer-action-delete { color: #b35e57; background: #fff0ed; }
+    .customer-action-delete:hover { background: #ffe2dd; }
+    .product-action {
+      border-radius: 0.65rem;
+      padding: 0.42rem 0.7rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+    }
+    .product-action:hover { transform: translateY(-1px); }
+    .product-action-edit { color: #2f8061; background: #e2f8ed; }
+    .product-action-edit:hover { background: #d0f1df; }
+    .product-action-delete { color: #b35e57; background: #fff0ed; }
+    .product-action-delete:hover { background: #ffe2dd; }
+    .order-status {
+      min-width: 0;
+      flex: 1 1 auto;
+      border: 1px solid #f4dfb8;
+      border-radius: 0.65rem;
+      background: #fffaf0;
+      padding: 0.42rem 0.55rem;
+      color: #996a2e;
+      font-size: 0.7rem;
+      font-weight: 800;
+      outline: none;
+    }
+    .order-action {
+      flex: 0 0 auto;
+      border-radius: 0.65rem;
+      padding: 0.42rem 0.65rem;
+      font-size: 0.68rem;
+      font-weight: 800;
+      transition: transform 150ms ease, background 150ms ease;
+    }
+    .order-action:hover { transform: translateY(-1px); }
+    .order-action-update { color: #9b6b2d; background: #fff0c9; }
+    .order-action-update:hover { background: #ffe5a0; }
+    .order-action-delete { color: #b35e57; background: #fff0ed; }
+    .order-action-delete:hover { background: #ffe2dd; }
+    #refresh-all { background: #58539b !important; box-shadow: 0 8px 18px rgba(88, 83, 155, 0.18) !important; }
+    #refresh-all:hover { background: #494486 !important; }
+    #customer-form button { background: #756bc0 !important; }
+    #product-form button { background: #4f9b7a !important; }
+    #order-form button { background: #c88745 !important; }
+    .cube-scene, .cube, .cube-face { display: none; }
+    .hero-visual-caption { display: none; }
+    @keyframes drift { from { transform: translate3d(-20px, -10px, 0) scale(0.95); } to { transform: translate3d(24px, 30px, 0) scale(1.08); } }
+
+    /* Corrección de jerarquía visual y stickers con volumen 3D. */
+    .hero-title {
+      display: block;
+      background: none !important;
+      -webkit-background-clip: initial !important;
+      background-clip: initial !important;
+      color: #273650 !important;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.8);
+    }
+    .sticker {
+      position: relative;
+      z-index: 0;
+      display: grid;
+      width: 56px;
+      height: 56px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.84);
+      border-radius: 19px;
+      font-size: 1.8rem;
+      line-height: 1;
+      transform: perspective(180px) rotateX(8deg) rotateY(-10deg) rotateZ(-4deg);
+      transform-style: preserve-3d;
+      transition: transform 260ms ease, box-shadow 260ms ease;
+    }
+    .sticker::before {
+      position: absolute;
+      z-index: -2;
+      inset: 5px -5px -7px 5px;
+      border-radius: 18px;
+      content: "";
+      transform: translateZ(-12px);
+      filter: blur(0.2px);
+    }
+    .sticker::after {
+      position: absolute;
+      top: 7px;
+      left: 10px;
+      width: 20px;
+      height: 8px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.62);
+      content: "";
+      transform: rotate(-28deg);
+      filter: blur(1px);
+    }
+    .sticker-customer {
+      background: linear-gradient(145deg, #f0edff 0%, #d9d3ff 100%);
+      box-shadow: 7px 10px 0 #bcb4ed, 12px 17px 24px rgba(91, 77, 164, 0.18);
+    }
+    .sticker-customer::before { background: #b8afe8; }
+    .sticker-product {
+      background: linear-gradient(145deg, #dcfff0 0%, #b5efd7 100%);
+      box-shadow: 7px 10px 0 #8ed1b2, 12px 17px 24px rgba(42, 137, 99, 0.16);
+    }
+    .sticker-product::before { background: #86c8a9; }
+    .sticker-order {
+      background: linear-gradient(145deg, #fff2c8 0%, #ffe1a0 100%);
+      box-shadow: 7px 10px 0 #edc77c, 12px 17px 24px rgba(190, 126, 37, 0.16);
+    }
+    .sticker-order::before { background: #e6bd72; }
+    .sticker-payment {
+      background: linear-gradient(145deg, #e3f5ff 0%, #b9e4f7 100%);
+      box-shadow: 7px 10px 0 #86c4df, 12px 17px 24px rgba(48, 133, 174, 0.16);
+    }
+    .sticker-payment::before { background: #79b8d3; }
+    .dashboard-panel:hover .sticker {
+      transform: perspective(180px) rotateX(2deg) rotateY(-2deg) rotateZ(2deg) translateY(-5px) translateZ(8px);
+    }
+    .sticker-glyph {
+      position: relative;
+      z-index: 2;
+      display: block;
+      transform-style: preserve-3d;
+      animation: glyph-float 3.8s ease-in-out infinite;
+      filter: drop-shadow(3px 5px 2px rgba(47, 54, 80, 0.16));
+    }
+    .glyph-customer {
+      --glyph-transform: translateZ(18px);
+      width: 30px;
+      height: 30px;
+      transform: var(--glyph-transform);
+    }
+    .glyph-customer::before {
+      position: absolute;
+      top: 0;
+      left: 10px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #756bc0, #433c87);
+      box-shadow: inset -3px -2px 0 rgba(39, 30, 91, 0.25), 2px 2px 0 #a49bdd;
+      content: "";
+    }
+    .glyph-customer::after {
+      position: absolute;
+      bottom: 0;
+      left: 3px;
+      width: 25px;
+      height: 16px;
+      border-radius: 15px 15px 5px 5px;
+      background: linear-gradient(145deg, #756bc0, #433c87);
+      box-shadow: inset -4px -3px 0 rgba(39, 30, 91, 0.22), 2px 3px 0 #a49bdd;
+      content: "";
+    }
+    .glyph-product {
+      --glyph-transform: translateZ(18px) rotateX(8deg) rotateY(-12deg);
+      width: 25px;
+      height: 21px;
+      border-radius: 3px;
+      background: linear-gradient(145deg, #70c49b, #39815f);
+      box-shadow: inset -4px -3px 0 rgba(24, 91, 64, 0.25), 2px 3px 0 #92d6b5;
+      transform: var(--glyph-transform);
+    }
+    .glyph-product::before {
+      position: absolute;
+      top: -7px;
+      left: 0;
+      width: 25px;
+      height: 10px;
+      background: linear-gradient(145deg, #a5e3c5, #57ae86);
+      clip-path: polygon(0 45%, 50% 0, 100% 45%, 50% 100%);
+      content: "";
+      transform: translateZ(4px);
+    }
+    .glyph-product::after {
+      position: absolute;
+      top: 1px;
+      right: -6px;
+      width: 7px;
+      height: 20px;
+      background: #2f6f53;
+      clip-path: polygon(0 0, 100% 15%, 100% 82%, 0 100%);
+      content: "";
+      transform: translateZ(-3px);
+    }
+    .glyph-order {
+      --glyph-transform: translateZ(18px) rotateX(8deg) rotateY(-12deg);
+      width: 25px;
+      height: 17px;
+      border: 3px solid #c88745;
+      border-top: 0;
+      border-radius: 2px 2px 6px 6px;
+      transform: var(--glyph-transform);
+    }
+    .glyph-order::before {
+      position: absolute;
+      top: -9px;
+      left: -8px;
+      width: 10px;
+      height: 3px;
+      border-radius: 3px;
+      background: #b36d2d;
+      content: "";
+      transform: rotate(34deg);
+    }
+    .glyph-order::after {
+      position: absolute;
+      bottom: -9px;
+      left: 1px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #a9672d;
+      box-shadow: 15px 0 0 #a9672d;
+      content: "";
+    }
+    .glyph-payment {
+      --glyph-transform: translateZ(18px) rotateX(8deg) rotateY(-12deg);
+      position: relative;
+      width: 30px;
+      height: 20px;
+      border: 2px solid #2c83a9;
+      border-radius: 4px;
+      background: linear-gradient(145deg, #75c9ec, #3785ad);
+      box-shadow: inset -3px -3px 0 rgba(31, 93, 124, 0.2), 2px 3px 0 #a2dff4;
+      transform: var(--glyph-transform);
+    }
+    .glyph-payment::before {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: #d9f4ff;
+      content: "";
+    }
+    .glyph-payment::after {
+      position: absolute;
+      right: 4px;
+      bottom: 3px;
+      width: 7px;
+      height: 3px;
+      border-radius: 2px;
+      background: #d9f4ff;
+      content: "";
+    }
+    @keyframes glyph-float {
+      0%, 100% { transform: var(--glyph-transform) translateY(0); }
+      50% { transform: var(--glyph-transform) translateY(-3px); }
+    }
+    .dashboard-panel > div:first-child { min-height: 228px; }
+    .metric-card { min-height: 126px; }
+    .order-success {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(24px) scale(0.94);
+    }
+    .order-success.is-visible {
+      animation: success-enter 500ms cubic-bezier(.2,.85,.25,1) forwards;
+    }
+    .order-success-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 290px;
+      padding: 1rem 1.15rem;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 1.25rem;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 20px 55px rgba(50, 60, 90, 0.2), 0 0 0 6px rgba(99, 168, 139, 0.08);
+      backdrop-filter: blur(16px);
+    }
+    .order-success-card::after {
+      position: absolute;
+      top: 0;
+      left: -35%;
+      width: 28%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+      content: "";
+      transform: skewX(-18deg);
+      animation: success-shine 700ms ease-out 250ms forwards;
+    }
+    .order-success-card strong,
+    .order-success-card span:not(.success-check) { display: block; }
+    .order-success-card strong { color: #2f765b; font-size: 0.9rem; }
+    .order-success-card span:not(.success-check) { margin-top: 0.15rem; color: #7b8799; font-size: 0.73rem; }
+    .success-check {
+      position: relative;
+      flex: 0 0 auto;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #a9e8ca, #55a982);
+      box-shadow: inset -4px -4px 0 rgba(45, 117, 84, 0.16), 0 8px 18px rgba(69, 150, 111, 0.22);
+      transform: scale(0);
+      animation: check-pop 500ms cubic-bezier(.2,1.5,.45,1) 100ms forwards;
+    }
+    .success-check::after {
+      position: absolute;
+      top: 0.64rem;
+      left: 0.76rem;
+      width: 0.9rem;
+      height: 0.48rem;
+      border-bottom: 3px solid white;
+      border-left: 3px solid white;
+      content: "";
+      transform: rotate(-45deg) scale(0);
+      animation: check-draw 280ms ease-out 360ms forwards;
+    }
+    .success-particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 2px;
+      background: #d5a15d;
+      opacity: 0;
+    }
+    .particle-one { top: 3px; left: 18%; animation: particle-one 850ms ease-out 80ms forwards; }
+    .particle-two { top: 12px; right: 10%; background: #8b82d0; animation: particle-two 820ms ease-out 120ms forwards; }
+    .particle-three { bottom: 4px; left: 52%; background: #73b996; animation: particle-three 900ms ease-out 50ms forwards; }
+    #panel-orders.order-saved { animation: panel-success 700ms ease-out; }
+    @keyframes success-enter { 0% { opacity: 0; transform: translateY(24px) scale(0.94); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes check-pop { to { transform: scale(1); } }
+    @keyframes check-draw { to { transform: rotate(-45deg) scale(1); } }
+    @keyframes success-shine { to { left: 125%; } }
+    @keyframes panel-success { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-4px); box-shadow: 0 22px 48px rgba(81, 151, 112, 0.18) !important; } }
+    @keyframes particle-one { 0% { opacity: 0; transform: translate(0, 10px) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(-22px, -34px) rotate(160deg); } }
+    @keyframes particle-two { 0% { opacity: 0; transform: translate(0, 10px) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(18px, -32px) rotate(120deg); } }
+    @keyframes particle-three { 0% { opacity: 0; transform: translate(0, 8px) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(2px, -42px) rotate(200deg); } }
+    @media (max-width: 640px) { .order-success { right: 1rem; left: 1rem; bottom: 1rem; } .order-success-card { min-width: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .order-success.is-visible { animation: none; opacity: 1; transform: none; }
+      .success-check, .success-check::after { animation: none; transform: none; }
+      .success-check::after { transform: rotate(-45deg); }
+      .success-particle, .order-success-card::after { display: none; }
+    }
+  </style>
+
+  <script>
+    const SERVICES = {
+      customers: { base: "http://localhost:8002", label: "Clientes" },
+      products: { base: "http://localhost:8001", label: "Productos" },
+      orders: { base: "http://localhost:8003", label: "Pedidos" },
+      payments: { base: "http://localhost:8004", label: "Pagos" }
+    };
+
+    class NetworkError extends Error {}
+    class ApiError extends Error {
+      constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+      }
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const STORAGE_KEYS = {
+      customers: "tienda_virtual_customers",
+      products: "tienda_virtual_products",
+      orders: "tienda_virtual_orders",
+      payments: "tienda_virtual_payments"
+    };
+
+    function readStored(service) {
+      try {
+        const value = JSON.parse(localStorage.getItem(STORAGE_KEYS[service]) || "[]");
+        return Array.isArray(value) ? value : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeStored(service, values) {
+      try {
+        localStorage.setItem(STORAGE_KEYS[service], JSON.stringify(values));
+      } catch (_) {
+        // El dashboard continúa funcionando aunque el navegador bloquee storage.
+      }
+    }
+
+    function upsertStored(service, value) {
+      const values = readStored(service).filter((item) => String(item.id) !== String(value.id));
+      values.push({ ...value, __dashboardOwned: true });
+      values.sort((a, b) => Number(a.id) - Number(b.id));
+      writeStored(service, values);
+      return values;
+    }
+
+    function removeStored(service, id) {
+      const values = readStored(service).filter((item) => String(item.id) !== String(id));
+      writeStored(service, values);
+      return values;
+    }
+
+    async function syncOwnedRecords(service, endpoint, remoteValues) {
+      const remoteIds = new Set(remoteValues.map((item) => String(item.id)));
+      const pending = readStored(service).filter(
+        (item) => !remoteIds.has(String(item.id))
+      );
+      for (const item of pending) {
+        const body = { ...item };
+        delete body.__dashboardOwned;
+        delete body.__localOnly;
+        try {
+          const created = await apiRequest(service, endpoint, {
+            method: "POST",
+            body: JSON.stringify(body)
+          });
+          upsertStored(service, created);
+          remoteValues.push(created);
+        } catch (error) {
+          // Si la API sigue caída, se conserva el registro local para el siguiente ciclo.
+          if (error instanceof NetworkError) break;
+        }
+      }
+      return remoteValues;
+    }
+
+    function mergeRemoteWithCache(service, remoteValues) {
+      const merged = new Map(readStored(service).map((item) => [String(item.id), item]));
+      remoteValues.forEach((item) => merged.set(String(item.id), item));
+      const values = [...merged.values()].sort((a, b) => Number(a.id) - Number(b.id));
+      writeStored(service, values);
+      return values;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function setServiceStatus(service, isOnline) {
+      const badge = $(`status-${service}`);
+      if (!badge) return;
+      badge.textContent = isOnline ? "● Disponible" : "● Servicio Inaccesible";
+      badge.className = isOnline
+        ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700"
+        : "rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700";
+    }
+
+    function setNotice(service, message, type = "error") {
+      const notice = $(`notice-${service}`);
+      if (!notice) return;
+      if (!message) {
+        notice.className = "mt-4 hidden rounded-xl border px-3 py-2 text-xs font-semibold";
+        notice.textContent = "";
+        return;
+      }
+      const styles = type === "success"
+        ? "mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+        : "mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700";
+      notice.className = styles;
+      notice.textContent = message;
+    }
+
+    let orderSuccessTimer;
+    function showOrderSuccess(order) {
+      const toast = $("order-success");
+      if (!toast) return;
+      const detail = $("order-success-detail");
+      if (detail) detail.textContent = "Pedido #" + order.id + " registrado y listo para consultar.";
+      toast.classList.remove("is-visible");
+      void toast.offsetWidth;
+      toast.classList.add("is-visible");
+      $("panel-orders")?.classList.add("order-saved");
+      window.clearTimeout(orderSuccessTimer);
+      orderSuccessTimer = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+        $("panel-orders")?.classList.remove("order-saved");
+      }, 3600);
+    }
+
+    function formatApiError(payload, statusCode) {
+      const detail = payload?.detail ?? payload?.message ?? "La API rechazó la operación.";
+      if (typeof detail === "string") return `${detail} (HTTP ${statusCode})`;
+      const pieces = [detail.message, detail.dependency, detail.reason].filter(Boolean);
+      return `${pieces.join(" · ") || "Error en la API"} (HTTP ${statusCode})`;
+    }
+
+    async function apiRequest(service, path, options = {}) {
+      try {
+        const response = await fetch(`${SERVICES[service].base}${path}`, {
+          ...options,
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new ApiError(formatApiError(payload, response.status), response.status);
+        }
+        setServiceStatus(service, true);
+        return payload;
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setServiceStatus(service, true);
+          throw error;
+        }
+        setServiceStatus(service, false);
+        throw new NetworkError(`No fue posible conectar con ${SERVICES[service].label}.`);
+      }
+    }
+
+    function renderEmpty(containerId, message) {
+      $(containerId).innerHTML = `<div class="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-center text-xs text-slate-400">${message}</div>`;
+    }
+
+    function renderCustomers(customers) {
+      $("customer-count").textContent = customers.length;
+      $("stat-customers").textContent = customers.length;
+      if (!customers.length) return renderEmpty("customer-list", "No hay clientes registrados.");
+      $("customer-list").innerHTML = customers.map((customer) => `
+        <article class="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0"><p class="font-bold text-slate-800">${escapeHtml(customer.name)}</p><p class="mt-1 truncate text-xs text-slate-500">${escapeHtml(customer.email)}</p><p class="mt-1 truncate text-xs text-slate-400">Entrega: ${escapeHtml(customer.address || "No registrada")}</p></div>
+            <span class="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold text-violet-700">#${escapeHtml(customer.id)}</span>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button type="button" data-customer-action="edit" data-customer-id="${escapeHtml(customer.id)}" class="customer-action customer-action-edit">Editar</button>
+            <button type="button" data-customer-action="delete" data-customer-id="${escapeHtml(customer.id)}" class="customer-action customer-action-delete">Eliminar</button>
+          </div>
+        </article>`).join("");
+    }
+
+    function renderProducts(products) {
+      $("product-count").textContent = products.length;
+      $("stat-products").textContent = products.length;
+      if (!products.length) return renderEmpty("product-list", "No hay productos registrados.");
+      $("product-list").innerHTML = products.map((product) => `
+        <article class="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0"><p class="font-bold text-slate-800">${escapeHtml(product.name)}</p><p class="mt-1 truncate text-xs text-slate-500">Stock: ${escapeHtml(product.stock ?? 100)}</p></div>
+            <span class="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold text-emerald-700">#${escapeHtml(product.id)}</span>
+          </div>
+          <p class="mt-3 text-sm font-black text-emerald-700">$ ${Number(product.price).toLocaleString("es-CO")}</p>
+          <div class="mt-3 flex gap-2">
+            <button type="button" data-product-action="edit" data-product-id="${escapeHtml(product.id)}" class="product-action product-action-edit">Editar</button>
+            <button type="button" data-product-action="delete" data-product-id="${escapeHtml(product.id)}" class="product-action product-action-delete">Eliminar</button>
+          </div>
+        </article>`).join("");
+    }
+
+    function renderOrders(orders) {
+      $("order-count").textContent = orders.length;
+      $("stat-orders").textContent = orders.length;
+      if (!orders.length) return renderEmpty("order-list", "No hay pedidos procesados.");
+      $("order-list").innerHTML = orders.map((order) => `
+        <article class="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div><p class="font-bold text-slate-800">Pedido #${escapeHtml(order.id)}</p><p class="mt-1 text-xs text-slate-500">Cliente #${escapeHtml(order.customer_id)}</p></div>
+            <span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold uppercase text-amber-800">${escapeHtml(order.status)}</span>
+          </div>
+          <p class="mt-3 text-sm font-black text-amber-700">Total: $ ${Number(order.total).toLocaleString("es-CO")}</p>
+          <div class="mt-3 flex items-center gap-2">
+            <select data-order-status="${escapeHtml(order.id)}" class="order-status">
+              <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pendiente</option>
+              <option value="confirmed" ${order.status === "confirmed" ? "selected" : ""}>Confirmado</option>
+              <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelado</option>
+            </select>
+            <button type="button" data-order-action="update" data-order-id="${escapeHtml(order.id)}" class="order-action order-action-update">Actualizar</button>
+            <button type="button" data-order-action="delete" data-order-id="${escapeHtml(order.id)}" class="order-action order-action-delete">Eliminar</button>
+          </div>
+        </article>`).join("");
+    }
+
+    function renderPayments(payments) {
+      $("payment-count").textContent = payments.length;
+      $("stat-payments").textContent = payments.length;
+      if (!payments.length) return renderEmpty("payment-list", "No hay pagos registrados.");
+      $("payment-list").innerHTML = payments.map((payment) => `
+        <article class="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div><p class="font-bold text-slate-800">Pago #${escapeHtml(payment.id)}</p><p class="mt-1 text-xs text-slate-500">Pedido #${escapeHtml(payment.order_id)} · ${escapeHtml(payment.method)}</p></div>
+            <span class="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold uppercase text-emerald-700">${escapeHtml(payment.status)}</span>
+          </div>
+          <p class="mt-3 text-sm font-black text-sky-700">$ ${Number(payment.amount).toLocaleString("es-CO")}</p>
+        </article>`).join("");
+    }
+
+    async function refreshCustomers() {
+      try {
+        const remoteCustomers = await apiRequest("customers", "/customers");
+        await syncOwnedRecords("customers", "/customers", remoteCustomers);
+        const customers = mergeRemoteWithCache("customers", remoteCustomers);
+        renderCustomers(customers);
+        setNotice("customers", "");
+      } catch (error) {
+        const cached = readStored("customers");
+        renderCustomers(cached);
+        setNotice("customers", cached.length
+          ? `Servicio Inaccesible. Mostrando ${cached.length} cliente(s) guardado(s) en este navegador.`
+          : error.message);
+      }
+    }
+
+    async function refreshProducts() {
+      try {
+        const remoteProducts = await apiRequest("products", "/products");
+        await syncOwnedRecords("products", "/products", remoteProducts);
+        const products = mergeRemoteWithCache("products", remoteProducts);
+        renderProducts(products);
+        setNotice("products", "");
+      } catch (error) {
+        const cached = readStored("products");
+        renderProducts(cached);
+        setNotice("products", cached.length
+          ? `Servicio Inaccesible. Mostrando ${cached.length} producto(s) guardado(s) en este navegador.`
+          : error.message);
+      }
+    }
+
+    async function refreshOrders() {
+      try {
+        const orders = mergeRemoteWithCache("orders", await apiRequest("orders", "/orders"));
+        renderOrders(orders);
+      } catch (error) {
+        const cached = readStored("orders");
+        renderOrders(cached);
+        setNotice("orders", cached.length
+          ? `Servicio Inaccesible. Mostrando ${cached.length} pedido(s) guardado(s) en este navegador.`
+          : error.message);
+      }
+    }
+
+    async function refreshPayments() {
+      try {
+        const payments = mergeRemoteWithCache("payments", await apiRequest("payments", "/payments"));
+        renderPayments(payments);
+        setNotice("payments", "");
+      } catch (error) {
+        const cached = readStored("payments");
+        renderPayments(cached);
+        setNotice("payments", cached.length
+          ? `Servicio Inaccesible. Mostrando ${cached.length} pago(s) guardado(s) en este navegador.`
+          : error.message);
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([refreshCustomers(), refreshProducts(), refreshOrders(), refreshPayments()]);
+    }
+
+    function handleFormError(service, error) {
+      setNotice(service, error.message, "error");
+    }
+
+    $("order-list").addEventListener("click", async (event) => {
+      const actionButton = event.target.closest("[data-order-action]");
+      if (!actionButton) return;
+      const orderId = actionButton.dataset.orderId;
+      const action = actionButton.dataset.orderAction;
+
+      if (action === "update") {
+        const statusSelect = document.querySelector(`[data-order-status="${orderId}"]`);
+        if (!statusSelect) return;
+        try {
+          const updated = await apiRequest(
+            "orders",
+            "/orders/" + encodeURIComponent(orderId) + "/status?new_status=" + encodeURIComponent(statusSelect.value),
+            { method: "PATCH" }
+          );
+          upsertStored("orders", updated);
+          setNotice("orders", "Estado del pedido actualizado correctamente.", "success");
+          await refreshOrders();
+        } catch (error) {
+          handleFormError("orders", error);
+        }
+        return;
+      }
+
+      if (action === "delete") {
+        const order = readStored("orders").find((item) => String(item.id) === String(orderId));
+        if (!order || !window.confirm("¿Eliminar el pedido #" + orderId + " y devolver su stock?")) return;
+        try {
+          await apiRequest("orders", "/orders/" + encodeURIComponent(orderId), { method: "DELETE" });
+          removeStored("orders", orderId);
+          setNotice("orders", "Pedido eliminado y stock restaurado correctamente.", "success");
+          await Promise.all([refreshOrders(), refreshProducts()]);
+        } catch (error) {
+          handleFormError("orders", error);
+        }
+      }
+    });
+
+    let editingCustomerId = null;
+
+    function resetCustomerForm() {
+      editingCustomerId = null;
+      $("customer-form").reset();
+      $("customer-id").disabled = false;
+      $("customer-form-title").textContent = "Registrar cliente";
+      $("customer-form-mode").classList.add("hidden");
+      $("customer-submit").textContent = "+ Registrar cliente";
+      $("customer-cancel-edit").classList.add("hidden");
+    }
+
+    function startCustomerEdit(customerId) {
+      const customer = readStored("customers").find((item) => String(item.id) === String(customerId));
+      if (!customer) {
+        setNotice("customers", "No se encontró el cliente seleccionado.", "error");
+        return;
+      }
+      editingCustomerId = Number(customer.id);
+      $("customer-id").value = customer.id;
+      $("customer-id").disabled = true;
+      $("customer-name").value = customer.name || "";
+      $("customer-email").value = customer.email || "";
+      $("customer-address").value = customer.address || "";
+      $("customer-form-title").textContent = "Actualizar cliente";
+      $("customer-form-mode").classList.remove("hidden");
+      $("customer-submit").textContent = "Guardar cambios";
+      $("customer-cancel-edit").classList.remove("hidden");
+      $("customer-name").focus();
+    }
+
+    $("customer-cancel-edit").addEventListener("click", resetCustomerForm);
+
+    $("customer-list").addEventListener("click", async (event) => {
+      const actionButton = event.target.closest("[data-customer-action]");
+      if (!actionButton) return;
+      const customerId = actionButton.dataset.customerId;
+      const action = actionButton.dataset.customerAction;
+
+      if (action === "edit") {
+        startCustomerEdit(customerId);
+        return;
+      }
+
+      if (action === "delete") {
+        const customer = readStored("customers").find((item) => String(item.id) === String(customerId));
+        if (!customer || !window.confirm("¿Eliminar a " + customer.name + "?")) return;
+        try {
+          await apiRequest("customers", "/customers/" + encodeURIComponent(customerId), { method: "DELETE" });
+          removeStored("customers", customerId);
+          if (String(editingCustomerId) === String(customerId)) resetCustomerForm();
+          setNotice("customers", "Cliente eliminado correctamente.", "success");
+          await refreshCustomers();
+        } catch (error) {
+          handleFormError("customers", error);
+        }
+      }
+    });
+
+    $("customer-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const draft = {
+        id: Number($("customer-id").value),
+        name: $("customer-name").value.trim(),
+        email: $("customer-email").value.trim(),
+        phone: "No registrado",
+        address: $("customer-address").value.trim()
+      };
+      try {
+        const isEditing = editingCustomerId !== null;
+        const saved = await apiRequest("customers", isEditing
+          ? "/customers/" + encodeURIComponent(editingCustomerId)
+          : "/customers", {
+          method: isEditing ? "PUT" : "POST",
+          body: JSON.stringify(draft)
+        });
+        upsertStored("customers", saved);
+        resetCustomerForm();
+        setNotice("customers", isEditing ? "Cliente actualizado correctamente." : "Cliente registrado correctamente.", "success");
+        await refreshCustomers();
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          if (editingCustomerId !== null) {
+            setNotice("customers", "Servicio inaccesible. No se pudo actualizar el cliente.", "error");
+          } else {
+            upsertStored("customers", { ...draft, __localOnly: true });
+            renderCustomers(readStored("customers"));
+            setNotice("customers", "Servicio inaccesible. Cliente guardado localmente en este navegador.", "success");
+            resetCustomerForm();
+          }
+        } else {
+          handleFormError("customers", error);
+        }
+      }
+    });
+
+    let editingProductId = null;
+
+    function resetProductForm() {
+      editingProductId = null;
+      $("product-form").reset();
+      $("product-id").disabled = false;
+      $("product-form-title").textContent = "Crear producto";
+      $("product-form-mode").classList.add("hidden");
+      $("product-submit").textContent = "+ Crear producto";
+      $("product-cancel-edit").classList.add("hidden");
+    }
+
+    function startProductEdit(productId) {
+      const product = readStored("products").find((item) => String(item.id) === String(productId));
+      if (!product) {
+        setNotice("products", "No se encontró el producto seleccionado.", "error");
+        return;
+      }
+      editingProductId = Number(product.id);
+      $("product-id").value = product.id;
+      $("product-id").disabled = true;
+      $("product-name").value = product.name || "";
+      $("product-price").value = product.price ?? "";
+      $("product-stock").value = product.stock ?? 0;
+      $("product-form-title").textContent = "Actualizar producto";
+      $("product-form-mode").classList.remove("hidden");
+      $("product-submit").textContent = "Guardar cambios";
+      $("product-cancel-edit").classList.remove("hidden");
+      $("product-name").focus();
+    }
+
+    $("product-cancel-edit").addEventListener("click", resetProductForm);
+
+    $("product-list").addEventListener("click", async (event) => {
+      const actionButton = event.target.closest("[data-product-action]");
+      if (!actionButton) return;
+      const productId = actionButton.dataset.productId;
+      const action = actionButton.dataset.productAction;
+
+      if (action === "edit") {
+        startProductEdit(productId);
+        return;
+      }
+
+      if (action === "delete") {
+        const product = readStored("products").find((item) => String(item.id) === String(productId));
+        if (!product || !window.confirm("¿Eliminar el producto " + product.name + "?")) return;
+        try {
+          await apiRequest("products", "/products/" + encodeURIComponent(productId), { method: "DELETE" });
+          removeStored("products", productId);
+          if (String(editingProductId) === String(productId)) resetProductForm();
+          setNotice("products", "Producto eliminado correctamente.", "success");
+          await refreshProducts();
+        } catch (error) {
+          handleFormError("products", error);
+        }
+      }
+    });
+
+    $("product-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const draft = {
+        id: Number($("product-id").value),
+        name: $("product-name").value.trim(),
+        description: "Producto registrado desde el dashboard",
+        price: Number($("product-price").value),
+        stock: Number($("product-stock").value)
+      };
+      try {
+        const isEditing = editingProductId !== null;
+        const saved = await apiRequest("products", isEditing
+          ? "/products/" + encodeURIComponent(editingProductId)
+          : "/products", {
+          method: isEditing ? "PUT" : "POST",
+          body: JSON.stringify(draft)
+        });
+        upsertStored("products", saved);
+        resetProductForm();
+        setNotice("products", isEditing ? "Producto actualizado correctamente." : "Producto creado correctamente.", "success");
+        await refreshProducts();
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          if (editingProductId !== null) {
+            setNotice("products", "Servicio inaccesible. No se pudo actualizar el producto.", "error");
+          } else {
+            upsertStored("products", { ...draft, __localOnly: true });
+            renderProducts(readStored("products"));
+            setNotice("products", "Servicio inaccesible. Producto guardado localmente en este navegador.", "success");
+            resetProductForm();
+          }
+        } else {
+          handleFormError("products", error);
+        }
+      }
+    });
+
+    $("payment-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const amountValue = $("payment-amount").value.trim();
+      const draft = {
+        id: Number($("payment-id").value),
+        order_id: Number($("payment-order-id").value),
+        method: $("payment-method").value
+      };
+      if (amountValue) draft.amount = Number(amountValue);
+      try {
+        const created = await apiRequest("payments", "/payments", {
+          method: "POST",
+          body: JSON.stringify(draft)
+        });
+        upsertStored("payments", created);
+        event.target.reset();
+        setNotice("payments", "Pago procesado correctamente.", "success");
+        await refreshPayments();
+      } catch (error) {
+        handleFormError("payments", error);
+      }
+    });
+
+    $("order-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        // Si el navegador tenía registros locales pendientes, intenta
+        // sincronizarlos antes de pedirle a Pedidos que los valide.
+        await Promise.all([refreshCustomers(), refreshProducts()]);
+        const created = await apiRequest("orders", "/orders", {
+          method: "POST",
+          body: JSON.stringify({
+            id: Number($("order-id").value),
+            customer_id: Number($("order-customer-id").value),
+            items: [{
+              product_id: Number($("order-product-id").value),
+              quantity: Number($("order-quantity").value)
+            }]
+          })
+        });
+        upsertStored("orders", created);
+        event.target.reset();
+        $("order-quantity").value = 1;
+        setNotice("orders", "Pedido procesado correctamente.", "success");
+        showOrderSuccess(created);
+        await Promise.all([refreshOrders(), refreshProducts()]);
+      } catch (error) { handleFormError("orders", error); }
+    });
+
+    $("refresh-all").addEventListener("click", refreshAll);
+
+    document.querySelectorAll(".tilt-card").forEach((card) => {
+      card.addEventListener("pointermove", (event) => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = `perspective(1100px) rotateX(${(-y * 0.8).toFixed(2)}deg) rotateY(${(x * 1.2).toFixed(2)}deg) translateZ(2px)`;
+      });
+      card.addEventListener("pointerleave", () => {
+        card.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg) translateZ(0)";
+      });
+    });
+
+    refreshAll();
+    // La actualización periódica permite detectar una caída posterior al
+    // inicio sin obligar al profesor a recargar toda la página.
+    setInterval(refreshAll, 10000);
+  </script>
+</body>
+</html>
